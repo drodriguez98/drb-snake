@@ -1,336 +1,338 @@
-#       https://inventwithpython.com/wormy.py
+# Imports.
 
 import random, pygame, sys
 from pygame.locals import *
 
-#       CONSTANTES.
+# Constantes.
 
 FPS = 15
 
-ANCHO = 640
-ALTO = 480
-TAMAÑO_CELDA = 20
+WIDTH = 640
+HEIGHT = 480
 
-ANCHO_CELDA = int(ANCHO / TAMAÑO_CELDA)
-ALTO_CELDA = int(ALTO / TAMAÑO_CELDA)
+SIZE_CELL = 20
+WIDTH_CELL = int(WIDTH / SIZE_CELL)
+HEIGHT_CELL = int(HEIGHT / SIZE_CELL)
 
-BLANCO = (255, 255, 255)
-NEGRO = (0, 0, 0)
-ROJO = (255, 0, 0)
-VERDE = (0, 255, 0)
-VERDE_OSCURO = (0, 155, 0)
-GRIS_OSCURO  = (40, 40, 40)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+DARK_GREEN = (0, 155, 0)
+DARK_GREY  = (40, 40, 40)
 
-COLOR_FONDO = NEGRO
+BACKGROUND_COLOR = BLACK
 
-ARRIBA = 'up'
-ABAJO = 'down'
-IZQUIERDA = 'left'
-DERECHA = 'right'
+UP = 'up'
+DOWN = 'down'
+LEFT = 'left'
+RIGHT = 'right'
 
-CABEZA = 0 
+HEAD = 0 
 
-#       El juego no se inicia si el ancho o el alto de la ventana no son múltiplos del tamaño de las celdas. 
+# Comprobar si el ancho y el alto de la ventana son múltiplos del tamaño de las celdas. 
 
-assert ANCHO % TAMAÑO_CELDA == 0, "El ancho de la ventana debe ser un múltiplo del tamaño de la celda."
-assert ALTO % TAMAÑO_CELDA == 0, "La altura de la ventana debe ser un múltiplo del tamaño de la celda."
+assert WIDTH % SIZE_CELL == 0, "Window width must be a multiple of the cell size."
+assert HEIGHT % SIZE_CELL == 0, " Window height must be a multiple of the cell size."
 
 
-#       FUNCIÓN PRINCIPAL.
+# Main.
 
 def main():
 
-    global RELOJ, VENTANA, FUENTE
+    global CLOCK, WINDOW, FONT
 
     pygame.init()
 
-    RELOJ = pygame.time.Clock()
-    VENTANA = pygame.display.set_mode((ANCHO, ALTO))
-    FUENTE = pygame.font.Font('freesansbold.ttf', 18)
+    CLOCK = pygame.time.Clock()
+    WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
+    FONT = pygame.font.Font('freesansbold.ttf', 18)
 
     pygame.display.set_caption('Snake!')
 
-    mostrar_pantalla_inicial()
+    showHomeScreen()
 
     while True:
 
-        inicio()
+        start()
         game_over()
 
-#       FUNCIÓN CON LA LÓGICA DEL JUEGO.
+# Start      
 
-def inicio():
+def start():
 
-    #       Posiciones y dirección iniciales del gusano y la manzana.
+    # Posiciones y dirección iniciales del gusano y la manzana.
     
-    x = random.randint(5, ANCHO_CELDA - 6)
-    y = random.randint(5, ALTO_CELDA - 6)
+    x = random.randint(5, WIDTH_CELL - 6)
+    y = random.randint(5, HEIGHT_CELL - 6)
 
-    coordenadas = [{'x': x, 'y': y},
+    coordinates = [{'x': x, 'y': y},
                   {'x': x - 1, 'y': y},
                   {'x': x - 2, 'y': y}]
 
-    direccion = DERECHA
+    direction = RIGHT
 
-    manzana = posicion_aleatoria()
+    apple = randomPosition()
 
-    #      Bucle infinito que sale del juego si el usuario pulsa la tecla salir y cambia el valor de la dirección si se produce el evento asociado (pulsar alguna tecla de dirección). 
+    # Bucle infinito.
     
     while True:     
 
-        for evento in pygame.event.get(): 
+        for event in pygame.event.get(): 
 
-            if evento.type == QUIT:
+            # Salir del juego.
 
-                salir()
+            if event.type == QUIT:
 
-            if evento.type == KEYDOWN:
+                exit()
 
-                if (evento.key == K_LEFT or evento.key == K_a) and direccion != DERECHA:
+            # Cambiar de dirección.
 
-                    direccion = IZQUIERDA
+            if event.type == KEYDOWN:
 
-                elif (evento.key == K_RIGHT or evento.key == K_d) and direccion != IZQUIERDA:
+                if (event.key == K_LEFT or event.key == K_a) and direction != RIGHT:
 
-                    direccion = DERECHA
+                    direction = LEFT
 
-                elif (evento.key == K_UP or evento.key == K_w) and direccion != ABAJO:
+                elif (event.key == K_RIGHT or event.key == K_d) and direction != LEFT:
 
-                    direccion = ARRIBA
+                    direction = RIGHT
 
-                elif (evento.key == K_DOWN or evento.key == K_s) and direccion != ARRIBA:
+                elif (event.key == K_UP or event.key == K_w) and direction != DOWN:
 
-                    direccion = ABAJO
+                    direction = UP
 
-                elif evento.key == K_ESCAPE:
+                elif (event.key == K_DOWN or event.key == K_s) and direction != UP:
 
-                    salir()
+                    direction = DOWN
 
-        #       Choques con los bordes: game over.
+                elif event.key == K_ESCAPE:
 
-        if coordenadas[CABEZA]['x'] == -1 or coordenadas[CABEZA]['x'] == ANCHO_CELDA or coordenadas[CABEZA]['y'] == -1 or coordenadas[CABEZA]['y'] == ALTO_CELDA:
+                    exit()
+
+        # Finalizar el juego si hay una colisión con los bordes.
+
+        if coordinates[HEAD]['x'] == -1 or coordinates[HEAD]['x'] == WIDTH_CELL or coordinates[HEAD]['y'] == -1 or coordinates[HEAD]['y'] == HEIGHT_CELL:
 
             return 
 
-        #       Choques con la cola: game over.
+        # Finalizar el juego si hay una colisión con la cola.
 
-        for cuerpo in coordenadas[1:]:
+        for body in coordinates[1:]:
 
-            if cuerpo['x'] == coordenadas[CABEZA]['x'] and cuerpo['y'] == coordenadas[CABEZA]['y']:
+            if body['x'] == coordinates[HEAD]['x'] and body['y'] == coordinates[HEAD]['y']:
 
                 return 
         
-        #       Choque de la cabeza del gusano con la manzana: reubicación de la manzana. Si no, borramos el último segmento de la cola para dar efecto de movimiento.
+        # Reubicar la manzana si la cabeza del gusano toca la manzana. Si no, borrar el último segmento de la cola para dar efecto de movimiento.
 
-        if coordenadas[CABEZA]['x'] == manzana['x'] and coordenadas[CABEZA]['y'] == manzana['y']:
+        if coordinates[HEAD]['x'] == apple['x'] and coordinates[HEAD]['y'] == apple['y']:
 
-            manzana = posicion_aleatoria() 
+            apple = randomPosition() 
 
         else:
 
-            del coordenadas[-1]     
+            del coordinates[-1]     
 
-        #       Nueva cabeza en función de la dirección del gusano, también para dar efecto de movimiento.
+        # Crear nueva cabeza en función de la dirección del gusano.
 
-        if direccion == ARRIBA:
+        if direction == UP:
 
-            nueva_cabeza = {'x': coordenadas[CABEZA]['x'], 'y': coordenadas[CABEZA]['y'] - 1}
+            newHead = {'x': coordinates[HEAD]['x'], 'y': coordinates[HEAD]['y'] - 1}
 
-        elif direccion == ABAJO:
+        elif direction == DOWN:
 
-            nueva_cabeza = {'x': coordenadas[CABEZA]['x'], 'y': coordenadas[CABEZA]['y'] + 1}
+            newHead = {'x': coordinates[HEAD]['x'], 'y': coordinates[HEAD]['y'] + 1}
 
-        elif direccion == IZQUIERDA:
+        elif direction == LEFT:
 
-            nueva_cabeza = {'x': coordenadas[CABEZA]['x'] - 1, 'y': coordenadas[CABEZA]['y']}
+            newHead = {'x': coordinates[HEAD]['x'] - 1, 'y': coordinates[HEAD]['y']}
 
-        elif direccion == DERECHA:
+        elif direction == RIGHT:
 
-            nueva_cabeza = {'x': coordenadas[CABEZA]['x'] + 1, 'y': coordenadas[CABEZA]['y']}
+            newHead = {'x': coordinates[HEAD]['x'] + 1, 'y': coordinates[HEAD]['y']}
 
-        coordenadas.insert(0, nueva_cabeza)
+        coordinates.insert(0, newHead)
 
-        #       Elementos que se muestran en pantalla. Se actualiza continuamente según el valor de la constante FPS.
+        # Mostrar los elementos actualizados en pantalla. Se actualizan continuamente según el valor de la constante FPS.
 
-        VENTANA.fill(COLOR_FONDO)
-        mostrar_cuadricula()
-        mostrar_gusano(coordenadas)
-        mostrar_manzana(manzana)
-        mostrar_puntuacion(len(coordenadas) - 3)
+        WINDOW.fill(BACKGROUND_COLOR)
+        showGrid()
+        showWorm(coordinates)
+        showAppel(apple)
+        showPunctuation(len(coordinates) - 3)
 
         pygame.display.update()
 
-        RELOJ.tick(FPS)
+        CLOCK.tick(FPS)
 
-#       FUNCIÓN PARA EL TEXTO DE LA PANTALLA INICIAL Y GAME OVER.
+# Función para mostrar el texto de la pantalla inicial y game over.
 
-def mostrar_pulsar_tecla():
+def showPressKey():
 
-    animacion_pulsar_tecla = FUENTE.render('Pulsa cualquier tecla para jugar', True, BLANCO)
-    recta_pulsar_tecla = animacion_pulsar_tecla.get_rect()
-    recta_pulsar_tecla.topleft = (ANCHO - 300, ALTO - 30)
+    keyPressAnimation = FONT.render('Press any key to play', True, WHITE)
+    straight_press_key = keyPressAnimation.get_rect()
+    straight_press_key.topleft = (WIDTH - 300, HEIGHT - 30)
 
-    VENTANA.blit(animacion_pulsar_tecla, recta_pulsar_tecla)
+    WINDOW.blit(keyPressAnimation, straight_press_key)
 
-#       FUNCIÓN QUE COMPRUEBA SI EL USUARIO PULSA ALGUNA TECLA PARA SALIR.
+# Función para comprobar si el usuario pulsa alguna de las teclas asociadas para salir.
 
-def teclas_salir():
+def exitKeys():
 
     if len(pygame.event.get(QUIT)) > 0:
 
-        salir()
+        exit()
 
-    evento_salir = pygame.event.get(KEYUP)
+    exitEvent = pygame.event.get(KEYUP)
 
-    if len(evento_salir) == 0:
+    if len(exitEvent) == 0:
 
         return None
 
-    if evento_salir[0].key == K_ESCAPE:
+    if exitEvent[0].key == K_ESCAPE:
 
-        salir()
+        exit()
 
-    return evento_salir[0].key
+    return exitEvent[0].key
 
-#       FUNCIÓN QUE MUESTRA LA PANTALLA INICIAL Y LA ANIMACIÓN.
+# Función para mostrar la pantalla inicial y la animación.
 
-def mostrar_pantalla_inicial():
+def showHomeScreen():
 
-    fuente_animacion = pygame.font.Font('freesansbold.ttf', 100)
-    texto_animacion_1 = fuente_animacion.render('Snake!', True, BLANCO, VERDE_OSCURO)
-    texto_animacion_2 = fuente_animacion.render('Snake!', True, VERDE)
+    font = pygame.font.Font('freesansbold.ttf', 100)
+    text1 = font.render('Snake!', True, WHITE, DARK_GREEN)
+    text2 = font.render('Snake!', True, GREEN)
 
-    grados_1 = 0
-    grados_2 = 0
+    degreesText1 = 0
+    degreesText2 = 0
 
-    #       Bucle infinito que rota las animaciones mientras el usuario no pulsa ninguna tecla.
+    # Bucle infinito que rota las animaciones mientras el usuario no pulsa ninguna tecla.
 
     while True:
 
-        VENTANA.fill(COLOR_FONDO)
+        WINDOW.fill(BACKGROUND_COLOR)
 
-        animacion_1 = pygame.transform.rotate(texto_animacion_1, grados_1)
-        recta_animacion_1 = animacion_1.get_rect()
-        recta_animacion_1.center = (ANCHO / 2, ALTO / 2)
-        VENTANA.blit(animacion_1, recta_animacion_1)
+        animation1 = pygame.transform.rotate(text1, degreesText1)
+        straight1 = animation1.get_rect()
+        straight1.center = (WIDTH / 2, HEIGHT / 2)
+        WINDOW.blit(animation1, straight1)
 
-        animacion_2 = pygame.transform.rotate(texto_animacion_2, grados_2)
-        recta_animacion_2 = animacion_2.get_rect()
-        recta_animacion_2.center = (ANCHO / 2, ALTO / 2)
-        VENTANA.blit(animacion_2, recta_animacion_2)
+        animation2 = pygame.transform.rotate(text2, degreesText2)
+        straight2 = animation2.get_rect()
+        straight2.center = (WIDTH / 2, HEIGHT / 2)
+        WINDOW.blit(animation2, straight2)
 
-        mostrar_pulsar_tecla()
+        showPressKey()
 
-        if teclas_salir():
+        if exitKeys():
 
             pygame.event.get() 
             return
 
         pygame.display.update()
 
-        RELOJ.tick(FPS)
+        CLOCK.tick(FPS)
 
-        grados_1 += 3   #   rota 3 grados por frame
-        grados_2 += 7   #   rota 7 grados por frame
+        degreesText1 += 3   #   rota 3 grados por frame
+        degreesText2 += 7   #   rota 7 grados por frame
 
-#       FUNCIÓN PARA SALIR DEL JUEGO.
+# Función para salir del juego.
 
-def salir():
+def exit():
 
     pygame.quit()
     sys.exit()
 
-#       FUNCIÓN PARA DAR POSICIONES ALEATORIAS A LA MANZANA.
+# Función para reubicar aleatoriamente la manzana.
 
-def posicion_aleatoria():
+def randomPosition():
 
-    return {'x': random.randint(0, ANCHO_CELDA - 1), 'y': random.randint(0, ALTO_CELDA - 1)}
+    return {'x': random.randint(0, WIDTH_CELL - 1), 'y': random.randint(0, HEIGHT_CELL - 1)}
 
-
-#       FUNCIÓN PARA MOSTRAR MENSAJE DE GAME OVER. 
+# Función para mostrar mensaje de game over.
 
 def game_over():
 
-    fuente_game_over = pygame.font.Font('freesansbold.ttf', 75)
+    font = pygame.font.Font('freesansbold.ttf', 75)
 
-    animacion_game = fuente_game_over.render('Game', True, BLANCO)
-    animacion_over = fuente_game_over.render('Over', True, BLANCO)
+    animationWord1 = font.render('Game', True, WHITE)
+    animationWord2 = font.render('Over', True, WHITE)
 
-    recta_game = animacion_game.get_rect()
-    recta_over = animacion_over.get_rect()
+    straightWord1 = animationWord1.get_rect()
+    straightWord2 = animationWord2.get_rect()
     
-    recta_game.midtop = (ANCHO / 2, 10 + 140)
-    recta_over.midtop = (ANCHO / 2, recta_game.height + 75 + 100)
+    straightWord1.midtop = (WIDTH / 2, 10 + 140)
+    straightWord2.midtop = (WIDTH / 2, straightWord1.height + 75 + 100)
 
-    VENTANA.blit(animacion_game, recta_game)
-    VENTANA.blit(animacion_over, recta_over)
+    WINDOW.blit(animationWord1, straightWord1)
+    WINDOW.blit(animationWord2, straightWord2)
 
-    mostrar_pulsar_tecla()
+    showPressKey()
 
     pygame.display.update()
     pygame.time.wait(500)
 
-    teclas_salir() 
+    exitKeys() 
 
     while True:
 
-        if teclas_salir():
+        if exitKeys():
             pygame.event.get() 
             return
 
-#       FUNCIÓN PARA MOSTRAR PUNTUACIÓN.
+# Función para mostrar la puntuación.
 
-def mostrar_puntuacion(puntuacion):
+def showPunctuation(punctuation):
 
-    animacion_puntuacion = FUENTE.render('Puntuación: %s' % (puntuacion), True, BLANCO)
-    recta_puntuacion = animacion_puntuacion.get_rect()
-    recta_puntuacion.topleft = (ANCHO - 150, 10)
+    animation = FONT.render('Score: %s' % punctuation, True, WHITE)
+    straight = animation.get_rect()
+    straight.topleft = (WIDTH - 150, 10)
 
-    VENTANA.blit(animacion_puntuacion, recta_puntuacion)
+    WINDOW.blit(animation, straight)
 
-#       FUNCIÓN PARA MOSTRAR GUSANO.
+# Función para mostrar el gusano.
 
-def mostrar_gusano(coordenadas):
+def showWorm(coordinates):
 
-    for coord in coordenadas:
+    for c in coordinates:
 
-        x = coord['x'] * TAMAÑO_CELDA
-        y = coord['y'] * TAMAÑO_CELDA
+        x = c['x'] * SIZE_CELL
+        y = c['y'] * SIZE_CELL
 
-        recta_segmento = pygame.Rect(x, y, TAMAÑO_CELDA, TAMAÑO_CELDA)
-        pygame.draw.rect(VENTANA, VERDE_OSCURO, recta_segmento)
+        straightSegment = pygame.Rect(x, y, SIZE_CELL, SIZE_CELL)
+        pygame.draw.rect(WINDOW, DARK_GREEN, straightSegment)
 
-        recta_segmento_interno = pygame.Rect(x + 4, y + 4, TAMAÑO_CELDA - 8, TAMAÑO_CELDA - 8)
-        pygame.draw.rect(VENTANA, VERDE, recta_segmento_interno)
+        internalStraightSegment = pygame.Rect(x + 4, y + 4, SIZE_CELL - 8, SIZE_CELL - 8)
+        pygame.draw.rect(WINDOW, GREEN, internalStraightSegment)
 
-#       FUNCIÓN PARA MOSTRAR MANZANA.
+# Función para mostrar la manzana.
 
-def mostrar_manzana(coord):
+def showAppel(coordinates):
 
-    x = coord['x'] * TAMAÑO_CELDA
-    y = coord['y'] * TAMAÑO_CELDA
-    recta_manzana = pygame.Rect(x, y, TAMAÑO_CELDA, TAMAÑO_CELDA)
+    x = coordinates['x'] * SIZE_CELL
+    y = coordinates['y'] * SIZE_CELL
+    straight = pygame.Rect(x, y, SIZE_CELL, SIZE_CELL)
 
-    pygame.draw.rect(VENTANA, ROJO, recta_manzana)
+    pygame.draw.rect(WINDOW, RED, straight)
 
-#       FUNCIÓN PARA MOSTRAR CUADRÍCULA.
+# Función para mostrar la cuadrícula.
 
-def mostrar_cuadricula():
+def showGrid():
 
-    #       Líneas verticales.
+    # Líneas verticales.
 
-    for x in range(0, ANCHO, TAMAÑO_CELDA): 
+    for x in range(0, WIDTH, SIZE_CELL): 
 
-        pygame.draw.line(VENTANA, GRIS_OSCURO, (x, 0), (x, ALTO))
+        pygame.draw.line(WINDOW, DARK_GREY, (x, 0), (x, HEIGHT))
 
-    #       Líneas horizontales.
+    # Líneas horizontales.
 
-    for y in range(0, ALTO, TAMAÑO_CELDA): 
+    for y in range(0, HEIGHT, SIZE_CELL): 
 
-        pygame.draw.line(VENTANA, GRIS_OSCURO, (0, y), (ANCHO, y))
+        pygame.draw.line(WINDOW, DARK_GREY, (0, y), (WIDTH, y))
 
-
-#       Comprueba si es el archivo principal.
+# Comprueba si es el archivo principal.
 
 if __name__ == '__main__':
 
